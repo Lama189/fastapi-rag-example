@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: rag_db
+    environment:
+      POSTGRES_USER: ${APP__DB__USER}
+      POSTGRES_PASSWORD: ${APP__DB__PASSWORD}
+      POSTGRES_DB: ${APP__DB__NAME}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${APP__DB__USER} -d ${APP__DB__PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+
+  migrations:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag_migrations
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${APP__DB__USER}:${APP__DB__PASSWORD}@postgres:5432/${APP__DB__NAME}
+    command: uv run alembic upgrade head
+    volumes:
+      - .:/app
+      - venv_data:/app/.venv
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - venv_data:/app/.venv
+      - hf_models_cache:/root/.cache/huggingface
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${APP__DB__USER}:${APP__DB__PASSWORD}@postgres:5432/${APP__DB__NAME}
+      - HF_HOME=/root/.cache/huggingface
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    networks:
+      - app_network
+
+volumes:
+  pg_data:
+  venv_data:
+  hf_models_cache:
+
+networks:
+  app_network:
+    driver: bridge

@@ -1,0 +1,29 @@
+from datetime import datetime
+from uuid import UUID, uuid4
+
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import func, Index, TEXT
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.infrastructure.postgres.models.base_model import BaseModel
+
+
+class DocumentChunk(BaseModel):
+    __tablename__ = "document_chunk"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    content: Mapped[str] = mapped_column(TEXT)
+    metadata_: Mapped[dict[str, object]] = mapped_column("metadata", JSONB)
+    embedding: Mapped[list[float]] = mapped_column(Vector(1024))  
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    __table_args__ = (
+        Index(
+            "ix_document_chunk_embedding",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
