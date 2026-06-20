@@ -2,5 +2,6 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 
 google_embeddings = GoogleGenerativeAIEmbeddings(
-    model="models/text-embedding-004"
+    model="gemini-embedding-2-preview",
+    output_dimensionality=1024  
 )

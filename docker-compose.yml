@@ -11,7 +11,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${APP__DB__USER} -d ${APP__DB__PASSWORD}"]
+      test: ["CMD-SHELL", "pg_isready -U ${APP__DB__USER} -d ${APP__DB__NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -48,7 +48,7 @@ services:
       - hf_models_cache:/root/.cache/huggingface
     environment:
       - DATABASE_URL=postgresql+asyncpg://${APP__DB__USER}:${APP__DB__PASSWORD}@postgres:5432/${APP__DB__NAME}
-      - HF_HOME=/root/.cache/huggingface
+      - GOOGLE_API_KEY=${GEMINI_LLM_API_KEY}
     depends_on:
       migrations:
         condition: service_completed_successfully
